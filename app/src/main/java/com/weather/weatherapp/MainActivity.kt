@@ -2,6 +2,7 @@ package com.weather.weatherapp
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Geocoder
 import android.os.Bundle
@@ -14,6 +15,7 @@ import android.widget.TextView
 import android.widget.Toast
 import android.util.Log
 import android.view.inputmethod.EditorInfo
+import android.widget.LinearLayout
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -21,15 +23,27 @@ import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.ViewModelProvider
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
+import com.google.android.gms.maps.GoogleMap
+import com.google.android.gms.maps.OnMapReadyCallback
+import com.google.android.gms.maps.SupportMapFragment
+import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.TileOverlayOptions
+import com.google.android.gms.maps.model.UrlTileProvider
+import com.google.android.gms.maps.CameraUpdateFactory
 import com.weather.weatherapp.weatherapp.api.WeatherResponse
 import com.weather.weatherapp.viewmodel.WeatherViewModel
+import java.net.MalformedURLException
+import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+import com.google.android.gms.maps.model.TileProvider
+import com.google.android.gms.maps.model.Tile
+import java.net.HttpURLConnection
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var drawerLayout: DrawerLayout
@@ -38,7 +52,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var weatherViewModel: WeatherViewModel
     private lateinit var displayTempTextView: TextView
     private lateinit var cloudStatusTextView: TextView
+    private lateinit var map: GoogleMap
     private var globalLocation: String = "Location not available"
+    private val openWeatherMapKey = "bca01d630f188c4f75aee7f10249d99c"
 
     private val handler = Handler(Looper.getMainLooper())
     private val delay = 3 * 1000L // 3 seconds
@@ -87,6 +103,11 @@ class MainActivity : AppCompatActivity() {
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
+        // Initialize the map
+        val mapFragment = supportFragmentManager
+            .findFragmentById(R.id.weather_map) as SupportMapFragment
+        mapFragment.getMapAsync(this)
+
         // Check location permission and fetch the location
         if (ContextCompat.checkSelfPermission(
                 this,
@@ -116,8 +137,89 @@ class MainActivity : AppCompatActivity() {
             }
             false
         }
+
+        val navigationDrawer = findViewById<LinearLayout>(R.id.navigationDrawer)
+        val weatherMapButton = navigationDrawer.getChildAt(0) as TextView
+        weatherMapButton.setOnClickListener {
+            startActivity(Intent(this, WeatherMapActivity::class.java))
+            drawerLayout.closeDrawers()
+        }
     }
 
+    override fun onMapReady(googleMap: GoogleMap) {
+        map = googleMap
+
+        map.uiSettings.apply {
+            isZoomGesturesEnabled = false
+            isZoomControlsEnabled = false
+            isScrollGesturesEnabled = false
+            isRotateGesturesEnabled = false
+        }
+
+        val tileProvider = object : TileProvider {
+            val tileSize = 256
+
+            override fun getTile(x: Int, y: Int, zoom: Int): Tile? {
+                val url = "https://tile.openweathermap.org/map/temp_new/$zoom/$x/$y.png?appid=$openWeatherMapKey"
+                try {
+                    Log.d("WeatherMap", "Fetching tile: $url")
+                    val connection = URL(url).openConnection() as HttpURLConnection
+                    connection.doInput = true
+                    connection.connect()
+
+                    if (connection.responseCode == 200) {
+                        val input = connection.inputStream
+                        val byteArray = input.readBytes()
+
+                        // Debug: Print first few bytes to verify we're getting PNG data
+                        val hexString = byteArray.take(8).joinToString("") {
+                            String.format("%02X", it)
+                        }
+                        Log.d("WeatherMap", "First 8 bytes: $hexString")
+
+                        // Debug: Check content type
+                        val contentType = connection.contentType
+                        Log.d("WeatherMap", "Content Type: $contentType")
+
+                        return Tile(tileSize, tileSize, byteArray)
+                    } else {
+                        Log.e("WeatherMap", "Server returned code: ${connection.responseCode}")
+                        // Debug: Print error stream if available
+                        val errorStream = connection.errorStream?.bufferedReader()?.readText()
+                        Log.e("WeatherMap", "Error response: $errorStream")
+                    }
+                } catch (e: Exception) {
+                    Log.e("WeatherMap", "Error loading tile: $url", e)
+                }
+                return null
+            }
+        }
+
+        map.addTileOverlay(
+            TileOverlayOptions()
+                .tileProvider(tileProvider)
+                .visible(true)
+                .fadeIn(false)
+                .transparency(0.0f)  // Make fully opaque
+        )
+
+        if (ActivityCompat.checkSelfPermission(this,
+                Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            map.isMyLocationEnabled = true
+
+            fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+                location?.let {
+                    val userLocation = LatLng(it.latitude, it.longitude)
+                    map.moveCamera(CameraUpdateFactory.newLatLngZoom(userLocation, 5f))
+                    map.setMinZoomPreference(10f)
+                    map.setMaxZoomPreference(10f)
+                }
+            }
+        }
+    }
+
+
+    @SuppressLint("SetTextI18n")
     private fun updateWeatherUI(weatherResponse: WeatherResponse) {
         displayTempTextView.text = "${weatherResponse.current.temp_f.toInt()}°"
         cloudStatusTextView.text = "☁︎ ${weatherResponse.current.condition.text}"
@@ -140,13 +242,13 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    @SuppressLint("MissingPermission")
+    @SuppressLint("MissingPermission", "SetTextI18n")
     private fun fetchLocation() {
         fusedLocationClient.lastLocation.addOnSuccessListener { location ->
             if (location != null) {
                 val geocoder = Geocoder(this, Locale.getDefault())
                 val addresses = geocoder.getFromLocation(location.latitude, location.longitude, 1)
-                if (addresses != null && addresses.isNotEmpty()) {
+                if (!addresses.isNullOrEmpty()) {
                     val cityName = addresses[0].locality
                     Log.d("LocationFetch", "Found city: $cityName")
                     locationTextView.text = cityName
@@ -195,7 +297,7 @@ class MainActivity : AppCompatActivity() {
         try {
             val addresses = geocoder.getFromLocationName(query, 1)
 
-            if (addresses != null && addresses.isNotEmpty()) {
+            if (!addresses.isNullOrEmpty()) {
                 val closestLocation = addresses[0].locality ?: addresses[0].featureName
                 Log.d("LocationSearch", "Found location: $closestLocation")
                 updateLocation(closestLocation)
