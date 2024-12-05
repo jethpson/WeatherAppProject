@@ -7,9 +7,6 @@ import android.location.Geocoder
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.text.Editable
-import android.text.TextWatcher
-import java.util.TimeZone
 import android.view.View
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
@@ -21,12 +18,16 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.drawerlayout.widget.DrawerLayout
+import androidx.lifecycle.ViewModelProvider
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
+import com.weather.weatherapp.weatherapp.api.WeatherResponse
+import com.weather.weatherapp.viewmodel.WeatherViewModel
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import java.util.TimeZone
 
 class MainActivity : AppCompatActivity() {
 
@@ -34,14 +35,34 @@ class MainActivity : AppCompatActivity() {
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var locationTextView: TextView
     private lateinit var locationEditText: EditText
+    private lateinit var weatherViewModel: WeatherViewModel
+    private lateinit var displayTempTextView: TextView
+    private lateinit var cloudStatusTextView: TextView
     private var globalLocation: String = "Location not available"
 
     private val handler = Handler(Looper.getMainLooper())
-    private val delay = 3 * 1000L // 30 seconds
+    private val delay = 3 * 1000L // 3 seconds
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        // Initialize weather-related views
+        displayTempTextView = findViewById(R.id.DisplayTemp)
+        cloudStatusTextView = findViewById(R.id.CloudStatus)
+
+        // Initialize ViewModel
+        weatherViewModel = ViewModelProvider(this)[WeatherViewModel::class.java]
+
+        // Observe weather data
+        weatherViewModel.weatherData.observe(this) { weatherResponse ->
+            updateWeatherUI(weatherResponse)
+        }
+
+        // Observe errors
+        weatherViewModel.error.observe(this) { errorMessage ->
+            Toast.makeText(this, errorMessage, Toast.LENGTH_LONG).show()
+        }
 
         // Initialize the DrawerLayout
         drawerLayout = findViewById(R.id.drawerLayout)
@@ -97,19 +118,20 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun updateWeatherUI(weatherResponse: WeatherResponse) {
+        displayTempTextView.text = "${weatherResponse.current.temp_f.toInt()}°"
+        cloudStatusTextView.text = "☁︎ ${weatherResponse.current.condition.text}"
+    }
+
     private fun startRepeatingTask(timeTextView: TextView) {
         handler.postDelayed(object : Runnable {
             override fun run() {
-                // Call the updateTime method to update the time every 30 seconds
                 updateTime(timeTextView)
-
-                // Repeat the task every 30 seconds
                 handler.postDelayed(this, delay)
             }
         }, delay)
     }
 
-    // Function to toggle the navigation drawer
     private fun toggleDrawer() {
         if (drawerLayout.isDrawerOpen(findViewById(R.id.navigationDrawer))) {
             drawerLayout.closeDrawer(findViewById(R.id.navigationDrawer))
@@ -122,26 +144,28 @@ class MainActivity : AppCompatActivity() {
     private fun fetchLocation() {
         fusedLocationClient.lastLocation.addOnSuccessListener { location ->
             if (location != null) {
-                // Use Geocoder to get city name
                 val geocoder = Geocoder(this, Locale.getDefault())
                 val addresses = geocoder.getFromLocation(location.latitude, location.longitude, 1)
                 if (addresses != null && addresses.isNotEmpty()) {
                     val cityName = addresses[0].locality
-                    Log.d("LocationFetch", "Found city: $cityName") // Log city name
+                    Log.d("LocationFetch", "Found city: $cityName")
                     locationTextView.text = cityName
                     globalLocation = cityName ?: "City not found"
+
+                    // Fetch weather using coordinates
+                    weatherViewModel.fetchWeatherForLocation(location.latitude, location.longitude)
                 } else {
-                    Log.d("LocationFetch", "City not found") // Log if city not found
+                    Log.d("LocationFetch", "City not found")
                     locationTextView.text = "City not found"
                     globalLocation = "Location not available"
                 }
             } else {
-                Log.d("LocationFetch", "Location not available") // Log if location is null
+                Log.d("LocationFetch", "Location not available")
                 locationTextView.text = "Location not available"
                 globalLocation = "Failed to get location"
             }
         }.addOnFailureListener {
-            Log.e("LocationFetch", "Failed to fetch location", it) // Log any failure
+            Log.e("LocationFetch", "Failed to fetch location", it)
             locationTextView.text = "Failed to get location"
         }
     }
@@ -149,8 +173,8 @@ class MainActivity : AppCompatActivity() {
     private fun showEditTextForLocation() {
         locationTextView.visibility = View.GONE
         locationEditText.visibility = View.VISIBLE
-        locationEditText.setText(locationTextView.text) // Populate the EditText with current location
-        locationEditText.requestFocus()  // Make sure the EditText has focus
+        locationEditText.setText(locationTextView.text)
+        locationEditText.requestFocus()
         showKeyboard(locationEditText)
     }
 
@@ -165,106 +189,92 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun searchAndUpdateLocation(query: String) {
-        Log.d("LocationSearch", "Searching for: $query") // Log search query
+        Log.d("LocationSearch", "Searching for: $query")
         val geocoder = Geocoder(this, Locale.getDefault())
 
         try {
-            // Use Geocoder to search for locations matching the query
-            val addresses = geocoder.getFromLocationName(query, 1) // Search for the location name
+            val addresses = geocoder.getFromLocationName(query, 1)
 
             if (addresses != null && addresses.isNotEmpty()) {
-                // Choose the closest match (first result)
                 val closestLocation = addresses[0].locality ?: addresses[0].featureName
-                Log.d("LocationSearch", "Found location: $closestLocation") // Log the found location
+                Log.d("LocationSearch", "Found location: $closestLocation")
                 updateLocation(closestLocation)
             } else {
-                // No matching location found
-                Log.d("LocationSearch", "No matching location found") // Log if no location found
+                Log.d("LocationSearch", "No matching location found")
                 Toast.makeText(this, "Location not found", Toast.LENGTH_SHORT).show()
             }
         } catch (e: Exception) {
-            Log.e("LocationSearch", "Error while searching location", e) // Log errors
+            Log.e("LocationSearch", "Error while searching location", e)
         }
     }
 
     private fun updateLocation(newLocation: String) {
-        Log.d("LocationUpdate", "Updating location to: $newLocation") // Log location update
+        Log.d("LocationUpdate", "Updating location to: $newLocation")
         globalLocation = newLocation
-        locationTextView.text = newLocation  // This updates the TextView with the new location
+        locationTextView.text = newLocation
         locationTextView.visibility = View.VISIBLE
         locationEditText.visibility = View.GONE
-        hideKeyboard(locationEditText)  // Hide the keyboard after update
+        hideKeyboard(locationEditText)
+
+        // Fetch weather for new location
+        weatherViewModel.fetchWeatherForCity(newLocation)
     }
 
     private val cityTimeZones = mapOf(
-        "New York" to "America/New_York", // GMT-5
-        "Los Angeles" to "America/Los_Angeles", // GMT-8
-        "London" to "Europe/London", // GMT+0
-        "Paris" to "Europe/Paris", // GMT+1
-        "Berlin" to "Europe/Berlin", // GMT+1
-        "Tokyo" to "Asia/Tokyo", // GMT+9
-        "Sydney" to "Australia/Sydney", // GMT+10
-        "Mumbai" to "Asia/Kolkata", // GMT+5:30
-        "Cape Town" to "Africa/Johannesburg", // GMT+2
-        "Rio de Janeiro" to "America/Sao_Paulo", // GMT-3
-        "Mexico City" to "America/Mexico_City", // GMT-6
-        "Beijing" to "Asia/Shanghai", // GMT+8
-        "Dubai" to "Asia/Dubai", // GMT+4
-        "Moscow" to "Europe/Moscow", // GMT+3
-        "Toronto" to "America/Toronto", // GMT-5
-        "Buenos Aires" to "America/Argentina/Buenos_Aires", // GMT-3
-        "Cairo" to "Africa/Cairo", // GMT+2
-        "Jakarta" to "Asia/Jakarta", // GMT+7
-        "Seoul" to "Asia/Seoul", // GMT+9
-        "Santiago" to "America/Santiago", // GMT-4
-        "Istanbul" to "Europe/Istanbul" // GMT+3
+        "New York" to "America/New_York",
+        "Los Angeles" to "America/Los_Angeles",
+        "London" to "Europe/London",
+        "Paris" to "Europe/Paris",
+        "Berlin" to "Europe/Berlin",
+        "Tokyo" to "Asia/Tokyo",
+        "Sydney" to "Australia/Sydney",
+        "Mumbai" to "Asia/Kolkata",
+        "Cape Town" to "Africa/Johannesburg",
+        "Rio de Janeiro" to "America/Sao_Paulo",
+        "Mexico City" to "America/Mexico_City",
+        "Beijing" to "Asia/Shanghai",
+        "Dubai" to "Asia/Dubai",
+        "Moscow" to "Europe/Moscow",
+        "Toronto" to "America/Toronto",
+        "Buenos Aires" to "America/Argentina/Buenos_Aires",
+        "Cairo" to "Africa/Cairo",
+        "Jakarta" to "Asia/Jakarta",
+        "Seoul" to "Asia/Seoul",
+        "Santiago" to "America/Santiago",
+        "Istanbul" to "Europe/Istanbul"
     )
 
     fun updateTime(timeTextView: TextView) {
         if (globalLocation != "Location not available" && globalLocation != "Failed to get location") {
-            // Get the current time and format it based on the timezone of the location
             val currentTime = Date()
-            val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault()) // Example: 10:30 AM
+            val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
 
             try {
-                // Get the timezone of the phone (device's current time zone)
                 val phoneTimeZone = TimeZone.getDefault()
-
-                // Fetch the time zone for the global location (from the cityTimeZones map)
                 val locationTimeZoneId = cityTimeZones[globalLocation]
 
                 if (locationTimeZoneId != null) {
                     val locationTimeZone = TimeZone.getTimeZone(locationTimeZoneId)
-
-                    // Log for debugging
                     Log.d("TimeUpdate", "Phone TimeZone: ${phoneTimeZone.id}, Location TimeZone: ${locationTimeZone.id}")
 
-                    // Get the calendar for the location time zone
                     val calendar = Calendar.getInstance(locationTimeZone)
                     calendar.time = currentTime
 
-                    // Convert to phone's time zone by adjusting with offsets
                     val phoneOffset = phoneTimeZone.rawOffset
                     val locationOffset = locationTimeZone.rawOffset
 
                     val adjustedTime = Date(currentTime.time + (locationOffset - phoneOffset).toLong())
-
-                    // Format the adjusted time for display
                     val formattedTime = timeFormat.format(adjustedTime)
-
-                    // Set the formatted time to the TextView
                     timeTextView.text = formattedTime
                 } else {
                     Log.e("TimeUpdate", "Location TimeZone not found for $globalLocation")
                 }
             } catch (e: Exception) {
-                // Handle any error with fetching the timezone or formatting
                 Log.e("TimeUpdate", "Error updating time: ", e)
             }
         } else {
-            // Fallback to showing current local time if location is not available
             val currentTime = Date()
-            val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault()) // Example: 10:30 AM
+            val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
             val formattedTime = timeFormat.format(currentTime)
             timeTextView.text = formattedTime
         }
