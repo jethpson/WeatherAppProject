@@ -15,11 +15,12 @@
         android:layout_height="match_parent">
 
         <!-- Upper Half Background -->
-        <View
+        <ImageView
             android:id="@+id/upperBackground"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:background="#2196F3"
+            android:src="@drawable/androidweatherbackground"
+            android:scaleType="centerCrop"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintHeight_percent="0.5" />
 
