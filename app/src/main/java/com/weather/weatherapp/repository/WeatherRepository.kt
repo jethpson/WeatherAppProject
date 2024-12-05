@@ -1,11 +1,12 @@
 package com.weather.weatherapp.repository
 
+import com.weather.weatherapp.BuildConfig
 import com.weather.weatherapp.weatherapp.api.RetrofitClient
 import com.weather.weatherapp.weatherapp.api.WeatherResponse
 
 class WeatherRepository {
     private val api = RetrofitClient.weatherApi
-    private val apiKey = "1c19095587fb4b0bace233250240412"
+    private val apiKey = BuildConfig.WEATHERAPI_KEY
 
     suspend fun getWeatherByCity(cityName: String): WeatherResponse {
         return api.getWeatherByCity(apiKey, cityName)

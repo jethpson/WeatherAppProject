@@ -54,7 +54,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var cloudStatusTextView: TextView
     private lateinit var map: GoogleMap
     private var globalLocation: String = "Location not available"
-    private val openWeatherMapKey = "bca01d630f188c4f75aee7f10249d99c"
+    private val openWeatherMapKey = BuildConfig.OPENWEATHER_API_KEY
 
     private val handler = Handler(Looper.getMainLooper())
     private val delay = 3 * 1000L // 3 seconds

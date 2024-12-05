@@ -1,3 +1,10 @@
+import java.util.Properties
+import java.io.FileInputStream
+
+val secretsFile = rootProject.file("secrets.properties")
+val secrets = Properties()
+secrets.load(FileInputStream(secretsFile))
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -7,7 +14,15 @@ android {
     namespace = "com.weather.weatherapp"
     compileSdk = 34
 
+    buildFeatures {
+        buildConfig = true 
+    }
+
     defaultConfig {
+        buildConfigField("String", "OPENWEATHER_API_KEY", "\"${secrets["OPENWEATHER_API_KEY"]}\"")
+        buildConfigField("String", "WEATHERAPI_KEY", "\"${secrets["WEATHERAPI_KEY"]}\"")
+        manifestPlaceholders["MAPS_API_KEY"] = "${secrets["MAPS_API_KEY"]}"
+
         applicationId = "com.weather.weatherapp"
         minSdk = 24
         targetSdk = 34

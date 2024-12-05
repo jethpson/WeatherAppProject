@@ -20,7 +20,7 @@ import java.net.URL
 class WeatherMapActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var map: GoogleMap
     private lateinit var fusedLocationClient: FusedLocationProviderClient
-    private val openWeatherMapKey = "bca01d630f188c4f75aee7f10249d99c"
+    private val openWeatherMapKey = BuildConfig.OPENWEATHER_API_KEY
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
