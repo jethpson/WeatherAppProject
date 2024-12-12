@@ -47,7 +47,6 @@ class WeatherMapActivity : AppCompatActivity(), OnMapReadyCallback {
                 }
             }
         }
-
         map.addTileOverlay(TileOverlayOptions().tileProvider(tileProvider))
 
         // Center on user location

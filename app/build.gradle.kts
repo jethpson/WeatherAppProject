@@ -15,7 +15,9 @@ android {
     compileSdk = 34
 
     buildFeatures {
-        buildConfig = true 
+        buildConfig = true
+        viewBinding = true // Enable View Binding
+        dataBinding = true // Enable Data Binding
     }
 
     defaultConfig {
@@ -68,4 +70,6 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+    // Coil for image loading
+    implementation("io.coil-kt:coil:2.2.2")
 }

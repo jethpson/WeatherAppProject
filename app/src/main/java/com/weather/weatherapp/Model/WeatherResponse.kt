@@ -1,4 +1,4 @@
-package com.weather.weatherapp.weatherapp.api
+package com.weather.weatherapp.Model
 
 data class WeatherResponse(
     val location: Location,
@@ -12,7 +12,7 @@ data class Location(
     val country: String,
     val lat: Double,
     val lon: Double,
-    val tz_id: String,  // Make sure tz_id is included here
+    val tz_id: String,  // Ensure tz_id is included here
     val localtime: String
 )
 
@@ -38,7 +38,7 @@ data class Forecast(
 )
 
 data class ForecastDay(
-    val date: String,  // String format for the date
+    val date: String,
     val day: Day
 )
 
