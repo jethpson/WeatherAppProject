@@ -1,5 +1,6 @@
 package com.weather.weatherapp
 
+import WeatherViewModel
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Intent
@@ -21,6 +22,8 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.ViewModelProvider
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.GoogleMap
@@ -28,11 +31,7 @@ import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.TileOverlayOptions
-import com.google.android.gms.maps.model.UrlTileProvider
 import com.google.android.gms.maps.CameraUpdateFactory
-import com.weather.weatherapp.weatherapp.api.WeatherResponse
-import com.weather.weatherapp.viewmodel.WeatherViewModel
-import java.net.MalformedURLException
 import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -41,6 +40,8 @@ import java.util.Locale
 import java.util.TimeZone
 import com.google.android.gms.maps.model.TileProvider
 import com.google.android.gms.maps.model.Tile
+import com.google.android.material.navigation.NavigationView
+import com.weather.weatherapp.Model.WeatherResponse //Check cuz there are two of them
 import java.net.HttpURLConnection
 
 class MainActivity : AppCompatActivity(), OnMapReadyCallback {
@@ -54,10 +55,15 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var cloudStatusTextView: TextView
     private lateinit var map: GoogleMap
     private var globalLocation: String = "Location not available"
-    private val openWeatherMapKey = "bca01d630f188c4f75aee7f10249d99c"
+    private val openWeatherMapKey = BuildConfig.OPENWEATHER_API_KEY
 
     private val handler = Handler(Looper.getMainLooper())
     private val delay = 3 * 1000L // 3 seconds
+
+    //for 7-day-forecast
+    private lateinit var navigationView: NavigationView
+
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -79,6 +85,19 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         weatherViewModel.error.observe(this) { errorMessage ->
             Toast.makeText(this, errorMessage, Toast.LENGTH_LONG).show()
         }
+
+        // Initialize RecyclerView for the 7-day forecast
+        val recyclerView7DayForecast = findViewById<RecyclerView>(R.id.recyclerView7DayForecast)
+        recyclerView7DayForecast.layoutManager = LinearLayoutManager(this)
+
+        // Observe the 7-day forecast data
+        weatherViewModel.sevenDayForecast.observe(this) { forecastList ->
+            val adapter = ForecastAdapter(forecastList)
+            recyclerView7DayForecast.adapter = adapter
+        }
+
+        // Fetch weather for a city (You can replace this with user input or a default city)
+        weatherViewModel.fetchWeatherForCity("your_api_key", "New York")  // Replace with actual city and API key
 
         // Initialize the DrawerLayout
         drawerLayout = findViewById(R.id.drawerLayout)
@@ -146,6 +165,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
+
     override fun onMapReady(googleMap: GoogleMap) {
         map = googleMap
 
@@ -203,6 +223,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 .transparency(0.0f)  // Make fully opaque
         )
 
+
+
         if (ActivityCompat.checkSelfPermission(this,
                 Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             map.isMyLocationEnabled = true
@@ -250,14 +272,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 val addresses = geocoder.getFromLocation(location.latitude, location.longitude, 1)
                 if (!addresses.isNullOrEmpty()) {
                     val cityName = addresses[0].locality
-                    Log.d("LocationFetch", "Found city: $cityName")
-                    locationTextView.text = cityName
-                    globalLocation = cityName ?: "City not found"
-
-                    // Fetch weather using coordinates
-                    weatherViewModel.fetchWeatherForLocation(location.latitude, location.longitude)
+                    locationTextView.text = cityName ?: "Unknown Location"
+                    globalLocation = cityName ?: "Location not available"
                 } else {
-                    Log.d("LocationFetch", "City not found")
                     locationTextView.text = "City not found"
                     globalLocation = "Location not available"
                 }
@@ -319,7 +336,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         hideKeyboard(locationEditText)
 
         // Fetch weather for new location
-        weatherViewModel.fetchWeatherForCity(newLocation)
+        weatherViewModel.fetchWeatherForCity(newLocation, openWeatherMapKey)
     }
 
     private val cityTimeZones = mapOf(
