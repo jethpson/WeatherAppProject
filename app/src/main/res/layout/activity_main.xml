@@ -139,7 +139,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Sun"
+                android:text="@string/sun"
                 android:textColor="#FFFFFF"
                 android:layout_marginStart="8dp"/>
         </LinearLayout>
@@ -170,7 +170,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:padding="8dp"
-            android:text="7-Day Forecast"
+            android:text="@string/_7_day_forecast"
             android:textSize="34sp"
             android:textStyle="bold" />
 
@@ -183,10 +183,11 @@
             android:visibility="gone" />
 
         <TextView
+            android:id="@+id/contact_button"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:padding="8dp"
-            android:text="Contact Us"
+            android:text="@string/contact_us"
             android:textSize="34sp"
             android:textStyle="bold" />
     </LinearLayout>

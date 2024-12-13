@@ -3,6 +3,7 @@ package com.weather.weatherapp
 import WeatherViewModel
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Geocoder
@@ -64,6 +65,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var navigationView: NavigationView
 
 
+    @SuppressLint("MissingInflatedId")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -170,6 +172,26 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         // Find the forecast button
         val forecastButton = findViewById<TextView>(R.id.forecast_button)
+        val weatherButton = findViewById<TextView>(R.id.weather_map_button)
+        val contactButton = findViewById<TextView>(R.id.contact_button)
+
+        contactButton.setOnClickListener {
+            val emailIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "message/rfc822" // MIME type for email
+                putExtra(Intent.EXTRA_EMAIL, arrayOf("example@example.com"))
+                putExtra(Intent.EXTRA_SUBJECT, "Subject of Email")
+                putExtra(Intent.EXTRA_TEXT, "Body of the email")
+            }
+
+            try {
+                // Opens the chooser for email apps
+                startActivity(Intent.createChooser(emailIntent, "Choose an Email app"))
+            } catch (e: ActivityNotFoundException) {
+                Toast.makeText(this, "No email app installed", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        weatherButton.setOnClickListener {}
 
         // Set click listener for the forecast button
         forecastButton.setOnClickListener {
