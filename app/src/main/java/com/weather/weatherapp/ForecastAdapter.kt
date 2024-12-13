@@ -1,5 +1,6 @@
 package com.weather.weatherapp
 
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
@@ -32,8 +33,10 @@ class ForecastAdapter(private val forecastList: List<ForecastDay>) :
             binding.temperature.text = "${day.avgtemp_f}°F"
             binding.description.text = day.condition.text
 
+            Log.d("ForecastAdapter", "Icon URL: ${day.condition.icon}")
+
             // Use Coil to load the weather icon from the condition object
-            binding.icon.load("https://openweathermap.org/img/wn/${day.condition.icon}.png") {
+            binding.icon.load("https:${day.condition.icon}") {
                 crossfade(true)
                 placeholder(R.drawable.placeholder_icon) // Optional placeholder
             }

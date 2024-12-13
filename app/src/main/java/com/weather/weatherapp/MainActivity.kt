@@ -213,7 +213,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             } else {
                 recyclerView7DayForecast.visibility = View.VISIBLE
                 // Fetch the forecast data when showing the RecyclerView
-                weatherViewModel.fetchWeatherForCity(openWeatherMapKey, globalLocation)
+                weatherViewModel.fetchWeatherForCity(globalLocation, openWeatherMapKey)
+
             }
         }
     }
