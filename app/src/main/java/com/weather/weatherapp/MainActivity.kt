@@ -78,7 +78,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         // Observe weather data
         weatherViewModel.weatherData.observe(this) { weatherResponse ->
-            updateWeatherUI(weatherResponse)
+            weatherResponse?.let { response ->
+                updateWeatherUI(response)
+            } ?: run {
+                // Handle null case
+                Toast.makeText(this, "Weather data not available", Toast.LENGTH_SHORT).show()
+            }
         }
 
         // Observe errors
@@ -162,6 +167,21 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         weatherMapButton.setOnClickListener {
             startActivity(Intent(this, WeatherMapActivity::class.java))
             drawerLayout.closeDrawers()
+        }
+
+        // Find the forecast button
+        val forecastButton = findViewById<TextView>(R.id.forecast_button)
+
+        // Set click listener for the forecast button
+        forecastButton.setOnClickListener {
+            // Toggle visibility of the RecyclerView
+            if (recyclerView7DayForecast.visibility == View.VISIBLE) {
+                recyclerView7DayForecast.visibility = View.GONE
+            } else {
+                recyclerView7DayForecast.visibility = View.VISIBLE
+                // Fetch the forecast data when showing the RecyclerView
+                weatherViewModel.fetchWeatherForCity(openWeatherMapKey, globalLocation)
+            }
         }
     }
 

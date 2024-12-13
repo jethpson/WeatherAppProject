@@ -12,14 +12,14 @@ class WeatherViewModel : ViewModel() {
 
     private val repository = WeatherRepository()
 
-    private val _weatherData = MutableLiveData<WeatherResponse>()
-    val weatherData: LiveData<WeatherResponse> get() = _weatherData
+    private val _weatherData = MutableLiveData<WeatherResponse?>()
+    val weatherData: LiveData<WeatherResponse?> = _weatherData  // Changed this line to accept nullable type
 
     private val _error = MutableLiveData<String>()
-    val error: LiveData<String> get() = _error
+    val error: LiveData<String> = _error
 
     private val _sevenDayForecast = MutableLiveData<List<ForecastDay>>()
-    val sevenDayForecast: LiveData<List<ForecastDay>> get() = _sevenDayForecast
+    val sevenDayForecast: LiveData<List<ForecastDay>> = _sevenDayForecast
 
     // Fetch weather data based on city name
     fun fetchWeatherForCity(apiKey: String, cityName: String) {
@@ -31,10 +31,16 @@ class WeatherViewModel : ViewModel() {
                 // Log the response to inspect the structure
                 Log.d("WeatherViewModel", "Weather Response: $response")
 
-                // Ensure forecast is accessed correctly
-                _sevenDayForecast.value = response.forecast.forecastday // Access forecast correctly
+                // Add null safety check
+                response?.forecast?.let { forecast ->
+                    _sevenDayForecast.value = forecast.forecastday
+                } ?: run {
+                    _sevenDayForecast.value = emptyList()
+                    Log.e("WeatherViewModel", "Forecast data is null")
+                }
             } catch (e: Exception) {
                 _error.value = "Error fetching weather: ${e.message}"
+                _sevenDayForecast.value = emptyList()
             }
         }
     }
@@ -49,9 +55,16 @@ class WeatherViewModel : ViewModel() {
                 // Log the response to inspect the structure
                 Log.d("WeatherViewModel", "Weather Response: $response")
 
-                _sevenDayForecast.value = response.forecast.forecastday // Set the 7-day forecast
+                // Add null safety check
+                response?.forecast?.let { forecast ->
+                    _sevenDayForecast.value = forecast.forecastday
+                } ?: run {
+                    _sevenDayForecast.value = emptyList()
+                    Log.e("WeatherViewModel", "Forecast data is null")
+                }
             } catch (e: Exception) {
                 _error.value = "Error fetching weather: ${e.message}"
+                _sevenDayForecast.value = emptyList()
             }
         }
     }
@@ -63,25 +76,25 @@ class WeatherViewModel : ViewModel() {
                 _sevenDayForecast.value = forecastDays
             } catch (e: Exception) {
                 _error.value = "Error fetching forecast: ${e.message}"
+                _sevenDayForecast.value = emptyList()
             }
         }
     }
 
     fun mapApiDayToModel(apiTemp: com.weather.weatherapp.weatherapp.api.Temp, apiWeather: List<com.weather.weatherapp.weatherapp.api.WeatherCondition>): com.weather.weatherapp.Model.Day {
         return com.weather.weatherapp.Model.Day(
-            maxtemp_c = apiTemp.day,  // Assume we use 'day' for the max temp
-            mintemp_c = apiTemp.night, // Assume we use 'night' for the min temp
-            avgtemp_c = (apiTemp.day + apiTemp.night) / 2, // Average temperature
-            condition = mapApiConditionToModel(apiWeather.first()) // Map to the first weather condition (or modify as needed)
+            maxtemp_c = apiTemp.day,
+            mintemp_c = apiTemp.night,
+            avgtemp_c = (apiTemp.day + apiTemp.night) / 2,
+            condition = mapApiConditionToModel(apiWeather.first())
         )
     }
 
     fun mapApiConditionToModel(apiCondition: com.weather.weatherapp.weatherapp.api.WeatherCondition): com.weather.weatherapp.Model.Condition {
         return com.weather.weatherapp.Model.Condition(
             text = apiCondition.description,
-            icon = "", // Add appropriate logic for icon mapping, if needed
-            code = 0 // Add appropriate logic for the code, if needed
+            icon = "",
+            code = 0
         )
     }
 }
-
