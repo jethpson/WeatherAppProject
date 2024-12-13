@@ -56,6 +56,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var cloudStatusTextView: TextView
     private lateinit var map: GoogleMap
     private var globalLocation: String = "Location not available"
+    private var globalLat: Double = 0.0  // Add this
+    private var globalLon: Double = 0.0  // Add this
     private val openWeatherMapKey = BuildConfig.OPENWEATHER_API_KEY
 
     private val handler = Handler(Looper.getMainLooper())
@@ -168,10 +170,15 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             false
         }
 
-        val navigationDrawer = findViewById<LinearLayout>(R.id.navigationDrawer)
-        val weatherMapButton = navigationDrawer.getChildAt(0) as TextView
+        val weatherMapButton = findViewById<TextView>(R.id.weather_map_button)
         weatherMapButton.setOnClickListener {
-            startActivity(Intent(this, WeatherMapActivity::class.java))
+            Log.d("MainActivity", "Sending location data - Lat: $globalLat, Lon: $globalLon, Location: $globalLocation")
+            val intent = Intent(this, WeatherMapActivity::class.java).apply {
+                putExtra("LOCATION_LAT", globalLat)
+                putExtra("LOCATION_LON", globalLon)
+                putExtra("LOCATION_NAME", globalLocation)
+            }
+            startActivity(intent)
             drawerLayout.closeDrawers()
         }
 
@@ -314,6 +321,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private fun fetchLocation() {
         fusedLocationClient.lastLocation.addOnSuccessListener { location ->
             if (location != null) {
+                globalLat = location.latitude  // Store latitude
+                globalLon = location.longitude // Store longitude
+
                 val geocoder = Geocoder(this, Locale.getDefault())
                 val addresses = geocoder.getFromLocation(location.latitude, location.longitude, 1)
                 if (!addresses.isNullOrEmpty()) {
@@ -321,7 +331,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     locationTextView.text = cityName ?: "Unknown Location"
                     globalLocation = cityName ?: "Location not available"
 
-                    // Fetch weather for the current location
                     if (cityName != null) {
                         Log.d("LocationFetch", "Fetching weather for location: $cityName")
                         weatherViewModel.fetchWeatherForCity(cityName)
@@ -367,9 +376,19 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             val addresses = geocoder.getFromLocationName(query, 1)
 
             if (!addresses.isNullOrEmpty()) {
-                val closestLocation = addresses[0].locality ?: addresses[0].featureName
+                val address = addresses[0]
+                globalLat = address.latitude
+                globalLon = address.longitude
+                Log.d("LocationSearch", "Found coordinates - Lat: $globalLat, Lon: $globalLon")
+
+                val closestLocation = address.locality ?: address.featureName
                 Log.d("LocationSearch", "Found location: $closestLocation")
                 updateLocation(closestLocation)
+
+                // Update the map with new coordinates
+                val newLocation = LatLng(globalLat, globalLon)
+                map.moveCamera(CameraUpdateFactory.newLatLngZoom(newLocation, 10f))
+                Log.d("MapUpdate", "Moving map to new location: $globalLat, $globalLon")
             } else {
                 Log.d("LocationSearch", "No matching location found")
                 Toast.makeText(this, "Location not found", Toast.LENGTH_SHORT).show()
