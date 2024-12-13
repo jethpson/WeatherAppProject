@@ -22,24 +22,34 @@ class WeatherViewModel : ViewModel() {
     val sevenDayForecast: LiveData<List<ForecastDay>> = _sevenDayForecast
 
     // Fetch weather data based on city name
-    fun fetchWeatherForCity(apiKey: String, cityName: String) {
+    fun fetchWeatherForCity(cityName: String, apiKey: String = "") {
         viewModelScope.launch {
             try {
+                Log.d("WeatherViewModel", "Starting fetch for city: $cityName")
                 val response = repository.getWeatherByCity(cityName)
+                Log.d("WeatherViewModel", "Received response for $cityName: $response")
+
+                if (response == null) {
+                    Log.e("WeatherViewModel", "Null response received for $cityName")
+                    _error.value = "Weather data not available"
+                    _weatherData.value = null
+                    return@launch
+                }
+
                 _weatherData.value = response
+                Log.d("WeatherViewModel", "Successfully set weather data: ${response.current.temp_f}°F")
 
-                // Log the response to inspect the structure
-                Log.d("WeatherViewModel", "Weather Response: $response")
-
-                // Add null safety check
-                response?.forecast?.let { forecast ->
+                response.forecast?.let { forecast ->
+                    Log.d("WeatherViewModel", "Processing forecast with ${forecast.forecastday.size} days")
                     _sevenDayForecast.value = forecast.forecastday
                 } ?: run {
-                    _sevenDayForecast.value = emptyList()
                     Log.e("WeatherViewModel", "Forecast data is null")
+                    _sevenDayForecast.value = emptyList()
                 }
             } catch (e: Exception) {
+                Log.e("WeatherViewModel", "Error fetching weather for $cityName", e)
                 _error.value = "Error fetching weather: ${e.message}"
+                _weatherData.value = null
                 _sevenDayForecast.value = emptyList()
             }
         }

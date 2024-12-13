@@ -21,8 +21,13 @@ class WeatherRepository {
     suspend fun getWeatherByCity(cityName: String): WeatherResponse? {
         return try {
             Log.d("WeatherRepository", "Fetching weather for city: $cityName")
-            val response = api.getWeatherByCity(apiKey, cityName)
+            val response = api.getWeatherByCity(
+                apiKey = apiKey,
+                cityName = cityName,
+                days = 7
+            )
             Log.d("WeatherRepository", "Received response: $response")
+
             mapApiToModel(response)
         } catch (e: Exception) {
             Log.e("WeatherRepository", "Error fetching weather for city: $cityName", e)
@@ -111,24 +116,31 @@ class WeatherRepository {
         }
     }
 
-    private fun mapApiDailyForecastToModel(dailyForecast: com.weather.weatherapp.weatherapp.api.ForecastDay?): ForecastDay {
+    private fun mapApiDailyForecastToModel(dailyForecast: com.weather.weatherapp.weatherapp.api.ForecastDay): com.weather.weatherapp.Model.ForecastDay {
         return try {
-            val formattedDate = if (dailyForecast?.date != null) {
-                try {
-                    SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(dailyForecast.date))
-                } catch (e: Exception) {
-                    Log.e("WeatherRepository", "Error formatting date", e)
-                    ""
-                }
-            } else ""
+            Log.d("WeatherRepository", "Mapping forecast day: ${dailyForecast.date}")
 
+            // Just use the date string directly instead of trying to parse it
             ForecastDay(
-                date = formattedDate,
-                day = mapApiDayToModel(dailyForecast?.day)
+                date = dailyForecast.date ?: "",  // Use the date string directly
+                day = mapApiDayToModel(dailyForecast.day)
             )
         } catch (e: Exception) {
             Log.e("WeatherRepository", "Error mapping daily forecast", e)
-            ForecastDay(date = "", day = createDefaultDay())
+            // Return a default ForecastDay if mapping fails
+            ForecastDay(
+                date = "",
+                day = Day(
+                    maxtemp_c = 0.0,
+                    mintemp_c = 0.0,
+                    avgtemp_c = 0.0,
+                    condition = Condition(
+                        text = "Unknown",
+                        icon = "",
+                        code = 0
+                    )
+                )
+            )
         }
     }
 

@@ -79,10 +79,17 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         // Observe weather data
         weatherViewModel.weatherData.observe(this) { weatherResponse ->
+            Log.d("MainActivity", "Received weather update: $weatherResponse")
             weatherResponse?.let { response ->
-                updateWeatherUI(response)
+                try {
+                    updateWeatherUI(response)
+                    Log.d("MainActivity", "Successfully updated UI with weather data")
+                } catch (e: Exception) {
+                    Log.e("MainActivity", "Error updating UI", e)
+                    Toast.makeText(this, "Error displaying weather data", Toast.LENGTH_SHORT).show()
+                }
             } ?: run {
-                // Handle null case
+                Log.e("MainActivity", "Weather response was null")
                 Toast.makeText(this, "Weather data not available", Toast.LENGTH_SHORT).show()
             }
         }
@@ -102,8 +109,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             recyclerView7DayForecast.adapter = adapter
         }
 
-        // Fetch weather for a city (You can replace this with user input or a default city)
-        weatherViewModel.fetchWeatherForCity("your_api_key", "New York")  // Replace with actual city and API key
 
         // Initialize the DrawerLayout
         drawerLayout = findViewById(R.id.drawerLayout)
@@ -315,6 +320,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     val cityName = addresses[0].locality
                     locationTextView.text = cityName ?: "Unknown Location"
                     globalLocation = cityName ?: "Location not available"
+
+                    // Fetch weather for the current location
+                    if (cityName != null) {
+                        Log.d("LocationFetch", "Fetching weather for location: $cityName")
+                        weatherViewModel.fetchWeatherForCity(cityName)
+                    }
                 } else {
                     locationTextView.text = "City not found"
                     globalLocation = "Location not available"
