@@ -131,9 +131,9 @@ class WeatherRepository {
             ForecastDay(
                 date = "",
                 day = Day(
-                    maxtemp_c = 0.0,
-                    mintemp_c = 0.0,
-                    avgtemp_c = 0.0,
+                    maxtemp_f = 0.0,
+                    mintemp_f = 0.0,
+                    avgtemp_f = 0.0,
                     condition = Condition(
                         text = "Unknown",
                         icon = "",
@@ -146,18 +146,18 @@ class WeatherRepository {
 
     private fun mapApiDayToModel(apiDay: com.weather.weatherapp.weatherapp.api.Day?): Day {
         return Day(
-            maxtemp_c = apiDay?.maxtemp_c ?: 0.0,
-            mintemp_c = apiDay?.mintemp_c ?: 0.0,
-            avgtemp_c = apiDay?.avgtemp_c ?: 0.0,
+            maxtemp_f = apiDay?.maxtemp_f ?: 0.0,
+            mintemp_f = apiDay?.mintemp_f ?: 0.0,
+            avgtemp_f = apiDay?.avgtemp_f ?: 0.0,
             condition = mapApiConditionToModel(apiDay?.condition)
         )
     }
 
     private fun createDefaultDay(): Day {
         return Day(
-            maxtemp_c = 0.0,
-            mintemp_c = 0.0,
-            avgtemp_c = 0.0,
+            maxtemp_f = 0.0,
+            mintemp_f = 0.0,
+            avgtemp_f = 0.0,
             condition = Condition(
                 text = "No data",
                 icon = "",

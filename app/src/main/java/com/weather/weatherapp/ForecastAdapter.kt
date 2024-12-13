@@ -29,7 +29,7 @@ class ForecastAdapter(private val forecastList: List<ForecastDay>) :
             val day = forecast.day
 
             binding.date.text = forecast.date
-            binding.temperature.text = "${day.avgtemp_c}°"  // Show average temperature
+            binding.temperature.text = "${day.avgtemp_f}°F"
             binding.description.text = day.condition.text
 
             // Use Coil to load the weather icon from the condition object

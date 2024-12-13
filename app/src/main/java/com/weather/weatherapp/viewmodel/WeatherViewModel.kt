@@ -93,9 +93,9 @@ class WeatherViewModel : ViewModel() {
 
     fun mapApiDayToModel(apiTemp: com.weather.weatherapp.weatherapp.api.Temp, apiWeather: List<com.weather.weatherapp.weatherapp.api.WeatherCondition>): com.weather.weatherapp.Model.Day {
         return com.weather.weatherapp.Model.Day(
-            maxtemp_c = apiTemp.day,
-            mintemp_c = apiTemp.night,
-            avgtemp_c = (apiTemp.day + apiTemp.night) / 2,
+            maxtemp_f = apiTemp.day,
+            mintemp_f = apiTemp.night,
+            avgtemp_f = (apiTemp.day + apiTemp.night) / 2,
             condition = mapApiConditionToModel(apiWeather.first())
         )
     }
